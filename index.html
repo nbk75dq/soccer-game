@@ -95,9 +95,31 @@ function update() {
     ball.dx *= 0.98;
     ball.dy *= 0.98;
 
-    // Bounce
-    if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) ball.dx *= -1;
-    if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) ball.dy *= -1;
+    // Bounce off left wall
+if (ball.x - ball.radius < 0) {
+    ball.x = ball.radius;
+    ball.dx *= -1;
+}
+
+// Bounce off right wall (only if not scoring)
+if (ball.x + ball.radius > canvas.width) {
+    // If not inside goal, bounce back
+    if (!(ball.y > goal.y && ball.y < goal.y + goal.height)) {
+        ball.x = canvas.width - ball.radius;
+        ball.dx *= -1;
+    }
+}
+
+// Bounce off top and bottom
+if (ball.y - ball.radius < 0) {
+    ball.y = ball.radius;
+    ball.dy *= -1;
+}
+if (ball.y + ball.radius > canvas.height) {
+    ball.y = canvas.height - ball.radius;
+    ball.dy *= -1;
+}
+
 
     // Goalkeeper AI (only reacts if ball is close enough)
     if (Math.abs(ball.x - goalkeeper.x) < goalkeeper.reactRange) {
