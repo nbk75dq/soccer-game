@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Soccer Game with Easier Goalkeeper</title>
+<style>
+    body {
+        background: green;
+        margin: 0;
+        overflow: hidden;
+    }
+    #gameCanvas {
+        display: block;
+        background: #006400;
+        border: 3px solid white;
+        margin: auto;
+    }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let player = { x: 100, y: 250, radius: 20, speed: 4 };
+let ball = { x: 200, y: 250, radius: 15, dx: 0, dy: 0 };
+let goal = { x: 750, y: 200, width: 20, height: 100 };
+
+// Goalkeeper is slower and less aggressive
+let goalkeeper = { x: 740, y: 200, width: 10, height: 80, speed: 2, reactRange: 250 };
+
+let keys = {};
+let score = 0;
+let timeLeft = 30;
+let gameOver = false;
+
+// Keyboard controls
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// Mouse controls (click where you want to move)
+canvas.addEventListener("mousemove", e => {
+    let rect = canvas.getBoundingClientRect();
+    let mouseX = e.clientX - rect.left;
+    let mouseY = e.clientY - rect.top;
+    player.x = mouseX;
+    player.y = mouseY;
+});
+
+// Timer
+let timerInterval = setInterval(() => {
+    if (!gameOver) {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            gameOver = true;
+            alert("Time's up! Final Score: " + score);
+        }
+    }
+}, 1000);
+
+function gameLoop() {
+    update();
+    draw();
+    if (!gameOver) requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    if (gameOver) return;
+
+    // Keyboard movement
+    if (keys["ArrowUp"]) player.y -= player.speed;
+    if (keys["ArrowDown"]) player.y += player.speed;
+    if (keys["ArrowLeft"]) player.x -= player.speed;
+    if (keys["ArrowRight"]) player.x += player.speed;
+
+    // Boundaries
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+    // Kick ball
+    let dx = ball.x - player.x;
+    let dy = ball.y - player.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < player.radius + ball.radius) {
+        let angle = Math.atan2(dy, dx);
+        ball.dx = Math.cos(angle) * 5;
+        ball.dy = Math.sin(angle) * 5;
+    }
+
+    // Move ball
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+    ball.dx *= 0.98;
+    ball.dy *= 0.98;
+
+    // Bounce
+    if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) ball.dx *= -1;
+    if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) ball.dy *= -1;
+
+    // Goalkeeper AI (only reacts if ball is close enough)
+    if (Math.abs(ball.x - goalkeeper.x) < goalkeeper.reactRange) {
+        if (ball.y > goalkeeper.y + goalkeeper.height / 2) {
+            goalkeeper.y += goalkeeper.speed;
+        } else if (ball.y < goalkeeper.y + goalkeeper.height / 2) {
+            goalkeeper.y -= goalkeeper.speed;
+        }
+    }
+
+    goalkeeper.y = Math.max(0, Math.min(canvas.height - goalkeeper.height, goalkeeper.y));
+
+    // Ball collision with goalkeeper
+    if (
+        ball.x + ball.radius > goalkeeper.x &&
+        ball.x - ball.radius < goalkeeper.x + goalkeeper.width &&
+        ball.y + ball.radius > goalkeeper.y &&
+        ball.y - ball.radius < goalkeeper.y + goalkeeper.height
+    ) {
+        ball.dx *= -1;
+        ball.x = goalkeeper.x - ball.radius;
+    }
+
+    // Goal check
+    if (
+        ball.x + ball.radius > goal.x &&
+        ball.y > goal.y &&
+        ball.y < goal.y + goal.height
+    ) {
+        score++;
+        resetPositions();
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Field
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(canvas.width/2, canvas.height/2, 70, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Goal
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+
+    // Goalkeeper
+    ctx.fillStyle = "red";
+    ctx.fillRect(goalkeeper.x, goalkeeper.y, goalkeeper.width, goalkeeper.height);
+
+    // Player
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ball
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Score + Timer
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + score, 20, 30);
+    ctx.fillText("Time: " + timeLeft, canvas.width - 100, 30);
+}
+
+function resetPositions() {
+    player.x = 100;
+    player.y = 250;
+    ball.x = 200;
+    ball.y = 250;
+    ball.dx = 0;
+    ball.dy = 0;
+}
+
+resetPositions();
+gameLoop();
+</script>
+</body>
+</html>
+
